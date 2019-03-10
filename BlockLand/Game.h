@@ -47,7 +47,6 @@ private:
 
 	// Player functions
 	void setupPlayer();
-	void managePlayerCollisions();
 	bool isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position);
 	float signOf(float t_value);
 	const sf::Vector2f unitVector(sf::Vector2f t_vector);

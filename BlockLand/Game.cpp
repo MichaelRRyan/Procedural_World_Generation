@@ -235,41 +235,8 @@ void Game::drawWorld()
 
 void Game::setupPlayer()
 {
-	m_player.setSize({ BLOCK_SIZE,BLOCK_SIZE });
+	m_player.setSize({ 10.0f,10.0f });
 	m_player.setPosition(500.0f, 0.0f);
-}
-
-void Game::managePlayerCollisions()
-{
-	sf::Vector2f pos = m_player.getPosition();
-	sf::Vector2f velUnit = unitVector(m_playerVelocity);
-	int row;
-	int col;
-	bool notColliding = true;
-
-	while (notColliding)
-	{
-		row = pos.y / BLOCK_SIZE;
-		col = pos.x / BLOCK_SIZE;
-
-		if (row < LEVEL_ROWS && row >= 0 && col < LEVEL_COLS && col >= 0) // Make sure the row and col and inside the array
-		{
-			if (m_blocks[row][col] != 0 && m_blocks[row][col] != 5) // If there's a block in the current row and col, the player is colliding
-			{
-				notColliding = false;
-				m_playerVelocity = { 0.0f, 0.0f };
-			}
-			else
-			{
-				
-			}
-		}
-		else
-		{
-			// Add code to avoid infinite loop
-		}
-
-	}
 }
 
 bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
@@ -278,37 +245,31 @@ bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
 	bool colliding = false;
 
 	int collisionRange = 6;
-	int playerRow = m_player.getPosition().y / BLOCK_SIZE;
-	int playerCol = m_player.getPosition().x / BLOCK_SIZE;
-	int startRow = playerRow - collisionRange;
-	int startCol = playerCol - collisionRange;
+	int targetRow = t_position.y / BLOCK_SIZE;
+	int targetCol = t_position.x / BLOCK_SIZE;
+	int startRow = targetRow - collisionRange;
+	int startCol = targetCol - collisionRange;
 
-	for (; startRow < 0 && startRow < playerRow; startRow++); // increment the start row if it's outside the bounds
-	for (; startCol < 0 && startCol < playerRow; startCol++); // increment the start col if it's outside the bounds
+	for (; startRow < 0 && startRow < targetRow; startRow++); // increment the start row if it's outside the bounds
+	for (; startCol < 0 && startCol < targetCol; startCol++); // increment the start col if it's outside the bounds
 
-	for (int row = startRow; row < LEVEL_ROWS && row < playerRow + collisionRange; row++)
+	for (int row = startRow; row < LEVEL_ROWS && row < targetRow + collisionRange; row++)
 	{
-		for (int col = startCol; col < LEVEL_COLS && col < playerCol + collisionRange; col++)
+		for (int col = startCol; col < LEVEL_COLS && col < targetCol + collisionRange; col++)
 		{
 			if (m_blocks[row][col] != 0 && m_blocks[row][col] != 5)
 			{
-				// Get the distance vector
-				sf::Vector2f distanceVector = t_position - sf::Vector2f{ static_cast<float>(col) * BLOCK_SIZE, static_cast<float>(row) * BLOCK_SIZE};
+				sf::Vector2f blockPosition{ static_cast<float>(col) * BLOCK_SIZE, static_cast<float>(row) * BLOCK_SIZE };
 
-				// Get the X and Y distance values
-				float xDistance = sqrt(distanceVector.x * distanceVector.x);
-				float yDistance = sqrt(distanceVector.y * distanceVector.y);
-
-				// Check horisontal collisions
-				if (xDistance < t_subjectOne.getGlobalBounds().width / 2 + BLOCK_SIZE / 2)
+				if (t_position.x + t_subjectOne.getSize().x > blockPosition.x && t_position.x < blockPosition.x + BLOCK_SIZE)
 				{
-					// Check vertical collisions
-					if (yDistance < t_subjectOne.getGlobalBounds().height / 2 + BLOCK_SIZE / 2)
+					if (t_position.y + t_subjectOne.getSize().y > blockPosition.y && t_position.y < blockPosition.y + BLOCK_SIZE)
 					{
 						colliding = true;
 						break;
 					}
 				}
+
 			}
 		}
 
