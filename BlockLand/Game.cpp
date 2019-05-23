@@ -10,6 +10,7 @@ Game::Game() :
 	setupShapes();
 	setupWorld();
 	setupPlayer();
+	loadFiles();
 }
 
 Game::~Game()
@@ -186,6 +187,15 @@ void Game::render()
 	m_window.display();
 }
 
+void Game::loadFiles()
+{
+	if (!m_blockTextures.loadFromFile("ASSETS//IMAGES//Flower.png"))
+	{
+		// Error loading file
+	}
+	m_blockSprite.setTexture(m_blockTextures);
+}
+
 void Game::setupShapes()
 {
 	m_renderBlock.setSize({ BLOCK_SIZE, BLOCK_SIZE });
@@ -267,8 +277,9 @@ void Game::setupWorld()
 
 	for (int i = 0; i < numberOfStarts; i++) // loop for every start position
 	{
-		int row = rand() % (LEVEL_ROWS - SEA_LEVEL) + SEA_LEVEL; // Pick a random row
 		int col = rand() % LEVEL_COLS; // Pick a random column
+		int row = rand() % (LEVEL_ROWS - m_surfaceLevel[col]) + m_surfaceLevel[col]; // Pick a random row
+		
 
 		branchCave(row, col, rand() % 3 - 1, rand() % 3 - 1); // Set a point there and possibily branch out
 	}
@@ -288,6 +299,57 @@ void Game::setupWorld()
 	}
 
 	updateWorld();
+
+
+
+
+	// TREE TESTING
+
+	for (int col = 0; col < LEVEL_COLS; col++)
+	{
+		if (m_surfaceLevel[col] < SEA_LEVEL && m_blocks[m_surfaceLevel[col]][col] == 1) // If the surface level is above sea level and is a grass block
+		{
+			if (rand() % 10 == 0)
+			{
+				int treeHeight = rand() % 8 + 3;
+				for (int i = 1; i <= treeHeight; i++) // Loops for the height of the tree
+				{
+					if (m_surfaceLevel[col] - i > 0 && m_blocks[m_surfaceLevel[col] - i][col] == 0) // If the surfaceLevel - i is within the vertical bounds and the block at that index is nothing
+					{
+						if (i == treeHeight) // If this is the last index
+						{
+							paintTree(i, m_surfaceLevel[col] - i, col);
+
+							for (int j = i; j > 0; j--) // Loop back down the tree and place wood
+							{
+								m_blocks[m_surfaceLevel[col] - j][col] = 6;
+							}
+						}
+					}
+					else if (i > 2) // If the tree is already a minimum height make a tree anyways
+					{
+						paintTree(i, m_surfaceLevel[col] - i - 1, col);
+
+						for (int j = i - 1; j > 0; j--) // Loop back down the tree and place wood
+						{
+							m_blocks[m_surfaceLevel[col] - j][col] = 6;
+						}
+					}
+					else // No room for a tree
+					{
+						break;
+					}
+				}
+			}
+			else if (rand() % 5 == 0) // If not placing a tree, random chance to place a flower
+			{
+				if (m_surfaceLevel[col] - 1 > 0 && m_blocks[m_surfaceLevel[col] - 1][col] == 0)
+				{
+					m_blocks[m_surfaceLevel[col] - 1][col] = 8;
+				}
+			}
+		}
+	}
 }
 
 /// <summary>
@@ -298,64 +360,56 @@ void Game::branchCave(int t_branchRow, int t_branchCol, int t_xDirection, int t_
 {
 	paintCave(t_branchRow, t_branchCol, rand() % 3);
 
-	// Random 29 in 30 chance of branching
-	if (rand() % 30 > 0)
+	// Random 39 in 40 chance of branching
+	if (rand() % 40 > 0)
 	{
-		int branchTimes = 1;
-		if (rand() % 8 == 0)
-			branchTimes = 2;
-		for (int i = 0; i < 1; i++)
+		int newBranchDirY = 0;
+		int newBranchDirX = 0;
+
+		// Choose a random direction from this point
+		if (t_xDirection == 0 || t_yDirection == 0) // If either of the values are zero
 		{
-
-			int newBranchDirY = 0;
-			int newBranchDirX = 0;
-
-
-			// Choose a random direction from this point
-			if (t_xDirection == 0 || t_yDirection == 0) // If either of the values are zero
+			if (t_xDirection == 0)
 			{
-				if (t_xDirection == 0)
-				{
-					newBranchDirX = rand() % 3 - 1;
-					newBranchDirY = t_yDirection;
-				}
-				else
-				{
-					newBranchDirX = t_xDirection;
-					newBranchDirY = rand() % 3 - 1;
-				}
+				newBranchDirX = rand() % 3 - 1;
+				newBranchDirY = t_yDirection;
 			}
 			else
 			{
-				(t_xDirection < 0) ? newBranchDirX = rand() % 2 - 1 : newBranchDirX = rand() % 2;
-				(t_yDirection < 0) ? newBranchDirY = rand() % 2 - 1 : newBranchDirY = rand() % 2;
+				newBranchDirX = t_xDirection;
+				newBranchDirY = rand() % 3 - 1;
 			}
-
-			int branchRow = t_branchRow + newBranchDirY;
-			int branchCol = t_branchCol + newBranchDirX;
-
-			// Check the new row is within the bounds of the world
-			if (branchRow < 0)
-			{
-				branchRow = 0;
-			}
-			else if (branchRow >= LEVEL_ROWS)
-			{
-				branchRow = LEVEL_ROWS - 1;
-			}
-
-			// Check the new col is within the bounds of the world
-			if (branchCol < 0)
-			{
-				branchCol = 0;
-			}
-			else if (branchCol >= LEVEL_COLS)
-			{
-				branchCol = LEVEL_COLS - 1;
-			}
-
-			branchCave(branchRow, branchCol, newBranchDirX, newBranchDirY); // Branch to the new row and col
 		}
+		else
+		{
+			(t_xDirection < 0) ? newBranchDirX = rand() % 2 - 1 : newBranchDirX = rand() % 2;
+			(t_yDirection < 0) ? newBranchDirY = rand() % 2 - 1 : newBranchDirY = rand() % 2;
+		}
+
+		int branchRow = t_branchRow + newBranchDirY;
+		int branchCol = t_branchCol + newBranchDirX;
+
+		// Check the new row is within the bounds of the world
+		if (branchRow < 0)
+		{
+			branchRow = 0;
+		}
+		else if (branchRow >= LEVEL_ROWS)
+		{
+			branchRow = LEVEL_ROWS - 1;
+		}
+
+		// Check the new col is within the bounds of the world
+		if (branchCol < 0)
+		{
+			branchCol = 0;
+		}
+		else if (branchCol >= LEVEL_COLS)
+		{
+			branchCol = LEVEL_COLS - 1;
+		}
+
+		branchCave(branchRow, branchCol, newBranchDirX, newBranchDirY); // Branch to the new row and col
 	}
 }
 
@@ -366,7 +420,7 @@ void Game::paintCave(int t_row, int t_col, int t_radius)
 {
 	for (int col = -t_radius; col <= t_radius; col++)
 	{
-		int maxRow = sqrt((t_radius * t_radius) - (col * col)); // Use the circle formula to get the row
+		int maxRow = static_cast<int>(sqrt((t_radius * t_radius) - (col * col))); // Use the circle formula to get the row
 		for (int row = -maxRow; row <= maxRow; row++)
 		{
 			if ((t_col + col < 0 || t_col + col >= LEVEL_COLS) || (t_row + row < 0 || t_row + row >= LEVEL_ROWS)) // If either of the values are outside the world bounds
@@ -376,6 +430,28 @@ void Game::paintCave(int t_row, int t_col, int t_radius)
 			else
 			{
 				m_caves[t_row + row][t_col + col] = true;
+			}
+		}
+	}
+}
+
+void Game::paintTree(int t_treeSize, int t_row, int t_col)
+{
+	int radius = static_cast<int>(t_treeSize / 1.8);
+	int offset = static_cast<int>(t_treeSize / 6);
+
+	for (int col = -radius; col <= radius; col++)
+	{
+		int maxRow = static_cast<int>(sqrt((radius * radius) - (col * col))); // Use the circle formula to get the row
+		for (int row = -maxRow; row <= maxRow; row++)
+		{
+			if ((t_col + col < 0 || t_col + col >= LEVEL_COLS) || (t_row + row - offset < 0 || t_row + row - offset >= LEVEL_ROWS)) // If either of the values are outside the world bounds
+			{
+				continue; // Continue and try the next point
+			}
+			else if (m_blocks[t_row + row - offset][t_col + col] == 0)
+			{
+				m_blocks[t_row + row - offset][t_col + col] = 7;
 			}
 		}
 	}
@@ -416,8 +492,8 @@ void Game::updateBlock(int t_row, int t_col)
 
 void Game::drawWorld()
 {
-	int onScreenMin = (m_currentView.getCenter().x - WINDOW_WIDTH / 2) / BLOCK_SIZE;
-	int onScreenMax = (m_currentView.getCenter().x + WINDOW_WIDTH / 2) / BLOCK_SIZE + 1;
+	int onScreenMin = static_cast<int>((m_currentView.getCenter().x - WINDOW_WIDTH / 2) / BLOCK_SIZE);
+	int onScreenMax = static_cast<int>((m_currentView.getCenter().x + WINDOW_WIDTH / 2) / BLOCK_SIZE + 1.0f);
 
 	// Increment the values if they're below zero to keep inside the array size
 	for (; onScreenMin < 0; onScreenMin++);
@@ -429,9 +505,17 @@ void Game::drawWorld()
 		{
 			if (m_blocks[i][j] != 0)
 			{
-				m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
-				m_renderBlock.setFillColor(m_blockColours[m_blocks[i][j]]);
-				m_window.draw(m_renderBlock);
+				if (m_blocks[i][j] == 8)
+				{
+					m_blockSprite.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+					m_window.draw(m_blockSprite);
+				}
+				else
+				{
+					m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+					m_renderBlock.setFillColor(m_blockColours[m_blocks[i][j]]);
+					m_window.draw(m_renderBlock);
+				}
 			}
 			else if (i > m_surfaceLevel[j])
 			{
@@ -462,8 +546,8 @@ bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
 	bool colliding = false;
 
 	int collisionRange = 6;
-	int targetRow = t_position.y / BLOCK_SIZE;
-	int targetCol = t_position.x / BLOCK_SIZE;
+	int targetRow = static_cast<int>(t_position.y / BLOCK_SIZE);
+	int targetCol = static_cast<int>(t_position.x / BLOCK_SIZE);
 	int startRow = targetRow - collisionRange;
 	int startCol = targetCol - collisionRange;
 
@@ -474,7 +558,7 @@ bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
 	{
 		for (int col = startCol; col < LEVEL_COLS && col < targetCol + collisionRange; col++)
 		{
-			if (m_blocks[row][col] != 0 && m_blocks[row][col] != 5)
+			if (m_blocks[row][col] != 0 && m_blocks[row][col] != 5 && m_blocks[row][col] != 6 && m_blocks[row][col] != 7 && m_blocks[row][col] != 8)
 			{
 				sf::Vector2f blockPosition{ static_cast<float>(col) * BLOCK_SIZE, static_cast<float>(row) * BLOCK_SIZE };
 
