@@ -73,6 +73,7 @@ private:
 	sf::RectangleShape m_renderBlock;
 
 	sf::Color m_blockColours[NUMBER_OF_BLOCKS]{sf::Color::Magenta, GRASS_COLOUR, DIRT_COLOUR, STONE_COLOUR, SAND_COLOUR, WATER_COLOUR, WOOD_COLOUR, LEAF_COLOUR, FLOWER_COLOUR };
+	sf::Vector2i m_blockSpritePositions[NUMBER_OF_BLOCKS]{ {0,0},{0,0},{16,0},{32,0},{48,0},{0,16},{16,16},{32,16},{48,16} };
 
 	sf::Texture m_blockTextures;
 	sf::Sprite m_blockSprite;
@@ -87,6 +88,8 @@ private:
 
 	float viewAdd = 0.0f;
 	bool m_cavesVisible = false;
+	bool m_largeView = true;
+	bool m_textures = false;
 
 	sf::RectangleShape m_player;
 

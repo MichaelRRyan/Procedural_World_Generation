@@ -58,6 +58,23 @@ void Game::processEvents()
 			{
 				m_cavesVisible = !m_cavesVisible;
 			}
+			if (sf::Keyboard::V == nextEvent.key.code)
+			{
+				if (m_largeView)
+				{
+					m_currentView.setSize(m_window.getDefaultView().getSize() / 2.0f);
+				}
+				else
+				{
+					m_currentView.setSize(m_window.getDefaultView().getSize());
+				}
+
+				m_largeView = !m_largeView;
+			}
+			if (sf::Keyboard::B == nextEvent.key.code)
+			{
+				m_textures = !m_textures;
+			}
 		}
 	}
 }
@@ -189,7 +206,7 @@ void Game::render()
 
 void Game::loadFiles()
 {
-	if (!m_blockTextures.loadFromFile("ASSETS//IMAGES//Flower.png"))
+	if (!m_blockTextures.loadFromFile("ASSETS//IMAGES//blockSheet.png"))
 	{
 		// Error loading file
 	}
@@ -505,9 +522,10 @@ void Game::drawWorld()
 		{
 			if (m_blocks[i][j] != 0)
 			{
-				if (m_blocks[i][j] == 8)
+				if (m_textures)
 				{
 					m_blockSprite.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+					m_blockSprite.setTextureRect(sf::IntRect{ m_blockSpritePositions[m_blocks[i][j]],{static_cast<int>(BLOCK_SIZE),static_cast<int>(BLOCK_SIZE)} });
 					m_window.draw(m_blockSprite);
 				}
 				else
@@ -519,9 +537,20 @@ void Game::drawWorld()
 			}
 			else if (i > m_surfaceLevel[j])
 			{
-				m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
-				m_renderBlock.setFillColor(sf::Color{ 40, 40, 40, 255 });
-				m_window.draw(m_renderBlock);
+				if (m_textures)
+				{
+					m_blockSprite.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+					m_blockSprite.setTextureRect(sf::IntRect{ m_blockSpritePositions[3],{static_cast<int>(BLOCK_SIZE),static_cast<int>(BLOCK_SIZE)} });
+					m_blockSprite.setColor(sf::Color{ 80, 80, 80, 255 });
+					m_window.draw(m_blockSprite);
+					m_blockSprite.setColor(sf::Color{ 255, 255, 255, 255 });
+				}
+				else
+				{
+					m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+					m_renderBlock.setFillColor(sf::Color{ 40, 40, 40, 255 });
+					m_window.draw(m_renderBlock);
+				}
 			}
 
 			if (m_cavesVisible && m_caves[i][j]) // Draw the caves on screen
