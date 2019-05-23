@@ -7,8 +7,8 @@
 
 const unsigned WINDOW_WIDTH{ 800u };
 const unsigned WINDOW_HEIGHT{ 800u };
-const unsigned LEVEL_ROWS{ 50u };
-const unsigned LEVEL_COLS{ 500u };
+const unsigned LEVEL_ROWS{ 100u }; // Vertical world size in blocks
+const unsigned LEVEL_COLS{ 500u }; // Horisontal world size in blocks
 const float BLOCK_SIZE{ 16.0f };
 const int SEA_LEVEL{ 32 };
 const unsigned NUMBER_OF_BLOCKS{ 6 }; // The number of blocks plus one for the null block
@@ -42,29 +42,40 @@ private:
 
 	void setupShapes();
 	void setupWorld();
+	void branchCave(int t_branchRow, int t_branchCol, int t_xDirection, int t_yDirection);
+	void paintCave(int t_row, int t_col, int t_radius);
+	void updateWorld();
+	void updateBlock(int t_row, int t_col);
 	void drawWorld();
-	
 
 	// Player functions
 	void setupPlayer();
 	bool isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position);
+	bool isInWater(sf::RectangleShape t_subject);
 	float signOf(float t_value);
 	const sf::Vector2f unitVector(sf::Vector2f t_vector);
 
 	sf::RenderWindow m_window;
 	bool m_exitGame;
 
+	int m_surfaceLevel[LEVEL_COLS];
+	bool m_caves[LEVEL_ROWS][LEVEL_COLS];
 	int m_blocks[LEVEL_ROWS][LEVEL_COLS];
 	// Block types: 0 == nothing, 1 == grass, 2 == dirt, 3 == stone, 4 == sand, 5 == water
 	sf::RectangleShape m_renderBlock;
 
 	sf::Color m_blockColours[NUMBER_OF_BLOCKS]{sf::Color::Magenta, GRASS_COLOUR, DIRT_COLOUR, STONE_COLOUR, SAND_COLOUR, WATER_COLOUR };
 
+	/// PLAYER VARIABLES
 	sf::Vector2f m_playerVelocity{ 0.0f, 0.0f };
 	sf::Vector2f m_playerAcceleration{ 0.0f, 0.0f };
 	float m_playerMovementSpeed = 4.0f;
 	float m_gravity = 0.4f;
 	float m_playerJumpSpeed = 6.0f;
+	bool m_inWater{ false };
+
+	float viewAdd = 0.0f;
+	bool m_cavesVisible = false;
 
 	sf::RectangleShape m_player;
 

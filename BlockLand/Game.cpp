@@ -53,6 +53,10 @@ void Game::processEvents()
 				setupWorld();
 				setupPlayer();
 			}
+			if (sf::Keyboard::C == nextEvent.key.code)
+			{
+				m_cavesVisible = !m_cavesVisible;
+			}
 		}
 	}
 }
@@ -63,6 +67,8 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		m_window.close();
 	}
+
+	m_inWater = isInWater(m_player);
 
 	// Get horisontal input
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
@@ -101,6 +107,37 @@ void Game::update(sf::Time t_deltaTime)
 		m_playerVelocity.y += m_playerAcceleration.y;
 	}
 
+	// if in water
+	if (m_inWater)
+	{
+		// Jump
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+		{
+			m_playerVelocity.y = -m_playerJumpSpeed / 2; // Jump at half the speed of a regular jump
+		}
+
+		m_playerVelocity = m_playerVelocity * 0.8f; // Slow the player's velocity
+	}
+
+
+	/// DEBUG
+	{
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+		{
+			m_playerVelocity.y = -m_playerJumpSpeed;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+		{
+			viewAdd -= 5.0f;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+		{
+			viewAdd += 5.0f;
+		}
+	}
+	
+
+
 	// Check for horisontal collisions
 	if (isColliding(m_player, sf::Vector2f{ m_player.getPosition().x + m_playerVelocity.x, m_player.getPosition().y }))
 	{
@@ -130,7 +167,12 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 	// Update the view to follow the player
-	m_currentView.setCenter(m_player.getPosition().x, m_currentView.getCenter().y);
+	if (m_player.getPosition().x > m_currentView.getSize().x / 2)
+	{
+		m_currentView.setCenter(m_player.getPosition().x, m_currentView.getCenter().x);
+	}
+	
+	m_currentView.setCenter(m_currentView.getCenter().x, /*m_window.getDefaultView().getCenter().y*/ m_player.getPosition().y + viewAdd);
 	m_window.setView(m_currentView);
 }
 
@@ -138,8 +180,8 @@ void Game::render()
 {
 	m_window.clear(SKY_COLOUR);
 
-	m_window.draw(m_player);
 	drawWorld();
+	m_window.draw(m_player);
 
 	m_window.display();
 }
@@ -164,6 +206,8 @@ void Game::setupWorld()
 			{
 				m_blocks[rows][cols] = 0;
 			}
+
+			m_caves[rows][cols] = false;
 		}
 	}
 
@@ -185,6 +229,8 @@ void Game::setupWorld()
 
 		// Sets the block to dirt above sea level and sand if below
 		(groundLevel < SEA_LEVEL) ? m_blocks[groundLevel][cols] = 1 : m_blocks[groundLevel][cols] = 4;
+
+		m_surfaceLevel[cols] = groundLevel; // Set the surface level of this column
 
 		currentBlock = groundLevel + 1; // Move to the next level to draw dirt
 
@@ -208,6 +254,164 @@ void Game::setupWorld()
 			m_blocks[currentBlock][cols] = 3;
 		}
 	}
+
+
+
+	// CAVE TESTING
+	/// <summary>
+	/// Places a random number of starting position then branches out
+	/// from them in random directions for a random number of blocks.
+	/// </summary>
+	 
+	int numberOfStarts = rand() % 40 + 20; // The number of starting positions for caves
+
+	for (int i = 0; i < numberOfStarts; i++) // loop for every start position
+	{
+		int row = rand() % (LEVEL_ROWS - SEA_LEVEL) + SEA_LEVEL; // Pick a random row
+		int col = rand() % LEVEL_COLS; // Pick a random column
+
+		branchCave(row, col, rand() % 3 - 1, rand() % 3 - 1); // Set a point there and possibily branch out
+	}
+
+
+
+	// Remove blocks with a cave over them
+	for (int col = 0; col < LEVEL_COLS; col++)
+	{
+		for (int row = 0; row < LEVEL_ROWS; row++)
+		{
+			if (m_caves[row][col] == true)
+			{
+				m_blocks[row][col] = 0;
+			}
+		}
+	}
+
+	updateWorld();
+}
+
+/// <summary>
+/// Creates a branch in an inputted position and gives the possibility of branching again
+/// </summary>
+/// <param name="t_branchPosition"></param>
+void Game::branchCave(int t_branchRow, int t_branchCol, int t_xDirection, int t_yDirection)
+{
+	paintCave(t_branchRow, t_branchCol, rand() % 3);
+
+	// Random 29 in 30 chance of branching
+	if (rand() % 30 > 0)
+	{
+		int branchTimes = 1;
+		if (rand() % 8 == 0)
+			branchTimes = 2;
+		for (int i = 0; i < 1; i++)
+		{
+
+			int newBranchDirY = 0;
+			int newBranchDirX = 0;
+
+
+			// Choose a random direction from this point
+			if (t_xDirection == 0 || t_yDirection == 0) // If either of the values are zero
+			{
+				if (t_xDirection == 0)
+				{
+					newBranchDirX = rand() % 3 - 1;
+					newBranchDirY = t_yDirection;
+				}
+				else
+				{
+					newBranchDirX = t_xDirection;
+					newBranchDirY = rand() % 3 - 1;
+				}
+			}
+			else
+			{
+				(t_xDirection < 0) ? newBranchDirX = rand() % 2 - 1 : newBranchDirX = rand() % 2;
+				(t_yDirection < 0) ? newBranchDirY = rand() % 2 - 1 : newBranchDirY = rand() % 2;
+			}
+
+			int branchRow = t_branchRow + newBranchDirY;
+			int branchCol = t_branchCol + newBranchDirX;
+
+			// Check the new row is within the bounds of the world
+			if (branchRow < 0)
+			{
+				branchRow = 0;
+			}
+			else if (branchRow >= LEVEL_ROWS)
+			{
+				branchRow = LEVEL_ROWS - 1;
+			}
+
+			// Check the new col is within the bounds of the world
+			if (branchCol < 0)
+			{
+				branchCol = 0;
+			}
+			else if (branchCol >= LEVEL_COLS)
+			{
+				branchCol = LEVEL_COLS - 1;
+			}
+
+			branchCave(branchRow, branchCol, newBranchDirX, newBranchDirY); // Branch to the new row and col
+		}
+	}
+}
+
+/// <summary>
+/// Paints an area with an inputted radius.
+/// </summary>
+void Game::paintCave(int t_row, int t_col, int t_radius)
+{
+	for (int col = -t_radius; col <= t_radius; col++)
+	{
+		int maxRow = sqrt((t_radius * t_radius) - (col * col)); // Use the circle formula to get the row
+		for (int row = -maxRow; row <= maxRow; row++)
+		{
+			if ((t_col + col < 0 || t_col + col >= LEVEL_COLS) || (t_row + row < 0 || t_row + row >= LEVEL_ROWS)) // If either of the values are outside the world bounds
+			{
+				continue; // Continue and try the next point
+			}
+			else
+			{
+				m_caves[t_row + row][t_col + col] = true;
+			}
+		}
+	}
+}
+
+void Game::updateWorld()
+{
+	for (int row = 0; row < LEVEL_ROWS; row++)
+	{
+		for (int col = 0; col < LEVEL_COLS; col++)
+		{
+			if (m_blocks[row][col] == 5)
+			{
+				updateBlock(row, col);
+			}
+		}
+	}
+}
+
+void Game::updateBlock(int t_row, int t_col)
+{
+	if (t_col - 1 >= 0 && m_blocks[t_row][t_col - 1] == 0)
+	{
+		m_blocks[t_row][t_col - 1] = 5;
+		updateBlock(t_row, t_col - 1);
+	}
+	if (t_col + 1 < LEVEL_COLS && m_blocks[t_row][t_col + 1] == 0)
+	{
+		m_blocks[t_row][t_col + 1] = 5;
+		updateBlock(t_row, t_col + 1);
+	}
+	if (t_row + 1 < LEVEL_ROWS && m_blocks[t_row + 1][t_col] == 0)
+	{
+		m_blocks[t_row + 1][t_col] = 5;
+		updateBlock(t_row + 1, t_col);
+	}
 }
 
 void Game::drawWorld()
@@ -225,8 +429,21 @@ void Game::drawWorld()
 		{
 			if (m_blocks[i][j] != 0)
 			{
-				m_renderBlock.setPosition(static_cast<float>(j *BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+				m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
 				m_renderBlock.setFillColor(m_blockColours[m_blocks[i][j]]);
+				m_window.draw(m_renderBlock);
+			}
+			else if (i > m_surfaceLevel[j])
+			{
+				m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+				m_renderBlock.setFillColor(sf::Color{ 40, 40, 40, 255 });
+				m_window.draw(m_renderBlock);
+			}
+
+			if (m_cavesVisible && m_caves[i][j]) // Draw the caves on screen
+			{
+				m_renderBlock.setPosition(static_cast<float>(j * BLOCK_SIZE), static_cast<float>(i * BLOCK_SIZE));
+				m_renderBlock.setFillColor(sf::Color::Black);
 				m_window.draw(m_renderBlock);
 			}
 		}
@@ -280,6 +497,41 @@ bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
 	}
 
 	return colliding;
+}
+
+/// <summary>
+/// Checks each corner of the inputted rectangle to see if it's within a water block.
+/// </summary>
+/// <param name="t_subject">Rectangle shape to check</param>
+/// <returns>Whether the shape is touching water or not</returns>
+bool Game::isInWater(sf::RectangleShape t_subject)
+{
+	bool touchingWater = false;
+
+	// Gets the block index at each corner of the inputted rectangle
+	sf::Vector2f cornerBlocks[4]{
+		{ t_subject.getPosition() / BLOCK_SIZE },
+		{ sf::Vector2f{ t_subject.getPosition().x + t_subject.getSize().x, t_subject.getPosition().y } / BLOCK_SIZE },
+		{ sf::Vector2f{ t_subject.getPosition().x, t_subject.getPosition().y + t_subject.getSize().y } / BLOCK_SIZE },
+		{ sf::Vector2f{ t_subject.getPosition().x + t_subject.getSize().x, t_subject.getPosition().y + t_subject.getSize().y } / BLOCK_SIZE }
+	};
+
+	for (int i = 0; i < 4; i++) // Loop for each corner of the player
+	{
+		if (cornerBlocks[i].x > 0 && cornerBlocks[i].x < LEVEL_COLS) // check the x index is within the world range
+		{
+			if (cornerBlocks[i].y > 0 && cornerBlocks[i].y < LEVEL_ROWS) // check the y index is within the world range
+			{
+				if (m_blocks[static_cast<unsigned>(cornerBlocks[i].y)][static_cast<unsigned>(cornerBlocks[i].x)] == 5) // Check if the block is water
+				{
+					touchingWater = true;
+					break; // doesn't need to check any more corners, is touching water already
+				}
+			}
+		}
+	}
+
+	return touchingWater;
 }
 
 float Game::signOf(float t_value)
