@@ -509,16 +509,22 @@ void Game::updateBlock(int t_row, int t_col)
 
 void Game::drawWorld()
 {
-	int onScreenMin = static_cast<int>((m_currentView.getCenter().x - WINDOW_WIDTH / 2) / BLOCK_SIZE);
-	int onScreenMax = static_cast<int>((m_currentView.getCenter().x + WINDOW_WIDTH / 2) / BLOCK_SIZE + 1.0f);
+	int onScreenXMin = static_cast<int>((m_currentView.getCenter().x - WINDOW_WIDTH / 2) / BLOCK_SIZE);
+	int onScreenXMax = static_cast<int>((m_currentView.getCenter().x + WINDOW_WIDTH / 2) / BLOCK_SIZE + 1.0f);
 
-	// Increment the values if they're below zero to keep inside the array size
-	for (; onScreenMin < 0; onScreenMin++);
-	for (; onScreenMax < 0; onScreenMax++);
+	int onScreenYMin = static_cast<int>((m_currentView.getCenter().y - WINDOW_HEIGHT / 2) / BLOCK_SIZE);
+	int onScreenYMax = static_cast<int>((m_currentView.getCenter().y + WINDOW_HEIGHT / 2) / BLOCK_SIZE + 1.0f);
 
-	for (int i = 0; i < LEVEL_ROWS; i++)
+	// Set values to zero if less than zero to avoid out of array bounds
+	if (onScreenXMin < 0) onScreenXMin = 0;
+	if (onScreenXMax < 0) onScreenXMax = 0;
+
+	if (onScreenYMin < 0) onScreenYMin = 0;
+	if (onScreenYMax < 0) onScreenYMax = 0;
+
+	for (int i = onScreenYMin; i < LEVEL_ROWS && i < onScreenYMax; i++)
 	{
-		for (int j = onScreenMin; j < LEVEL_COLS && j < onScreenMax; j++)
+		for (int j = onScreenXMin; j < LEVEL_COLS && j < onScreenXMax; j++)
 		{
 			if (m_blocks[i][j] != 0)
 			{
